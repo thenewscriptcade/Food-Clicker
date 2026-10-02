@@ -1,0 +1,1918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Clicker - Pixel Arcade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Press Start 2P', cursive;
+            user-select: none;
+            -webkit-user-select: none;
+            image-rendering: pixelated;
+        }
+
+        body {
+            background-color: #fff7ed;
+            background-image: 
+                linear-gradient(45deg, #fca5a5 25%, transparent 25%), 
+                linear-gradient(-45deg, #fca5a5 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #fca5a5 75%), 
+                linear-gradient(-45deg, transparent 75%, #fca5a5 75%);
+            background-size: 40px 40px;
+            background-position: 0 0, 0 20px, 20px -20px, -20px 0px;
+            color: #1e293b;
+            overflow-x: hidden;
+        }
+
+        .pixel-border {
+            box-shadow: 
+                -4px 0 0 0 #000,
+                4px 0 0 0 #000,
+                0 -4px 0 0 #000,
+                0 4px 0 0 #000,
+                0 0 0 4px #000;
+        }
+
+        .pixel-border-sm {
+            box-shadow: 
+                -2px 0 0 0 #000,
+                2px 0 0 0 #000,
+                0 -2px 0 0 #000,
+                0 2px 0 0 #000;
+        }
+
+        .pixel-shadow {
+            filter: drop-shadow(4px 4px 0px rgba(0,0,0,0.8));
+        }
+
+        @keyframes float-up {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-80px) scale(1.2); opacity: 0; }
+        }
+
+        .floating-text {
+            position: absolute;
+            animation: float-up 0.8s ease-out forwards;
+            pointer-events: none;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 2px 2px 0 #000;
+            z-index: 50;
+        }
+
+        @keyframes pulse-golden {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.15) rotate(10deg); }
+        }
+
+        .golden-food-anim {
+            animation: pulse-golden 1.5s infinite ease-in-out;
+        }
+
+        .pixel-pet-canvas {
+            image-rendering: pixelated;
+            width: 32px;
+            height: 32px;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3b82f6;
+            border: 2px solid #000;
+        }
+
+        /* Anti-Cheat Overlay */
+        #anticheat-modal {
+            background-color: rgba(15, 23, 42, 0.98);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between items-center p-2 md:p-6 relative select-none">
+
+    <!-- Anti-Cheat Lockdown & Account Wipe Modal -->
+    <div id="anticheat-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/95 p-4 text-center">
+        <div class="bg-red-950 border-4 border-red-600 pixel-border p-6 max-w-md w-full flex flex-col items-center gap-3">
+            <span class="text-4xl animate-bounce">🚨</span>
+            <h2 class="text-sm text-red-400 font-bold">ANTI-CHEAT LOCKDOWN</h2>
+            <div id="anticheat-reason" class="text-[8px] text-red-200 leading-relaxed font-mono bg-red-900/40 p-2 pixel-border-sm w-full">HACK OR TAMPERING DETECTED</div>
+            <div class="text-[7px] text-yellow-300 font-bold bg-black/60 p-2 pixel-border-sm w-full border border-yellow-500/50">
+                ⚠️ YOUR ACCOUNT HAS BEEN WIPED & RESTARTED TO 0 BITES!
+            </div>
+            <button onclick="dismissAntiCheatModal()" class="bg-red-600 hover:bg-red-500 text-white pixel-border px-4 py-2 text-[8px] font-bold cursor-pointer mt-2 transform active:translate-y-0.5">
+                RESTART FRESH ACCOUNT 🔄
+            </button>
+        </div>
+    </div>
+
+    <!-- Top Navigation Bar -->
+    <header class="w-full max-w-5xl flex flex-wrap justify-between items-center gap-3 z-30">
+        <!-- Top Left: Username & PVP -->
+        <div class="flex items-center gap-2">
+            <button onclick="openPvP()" class="bg-red-600 hover:bg-red-500 pixel-border p-2.5 md:p-3 flex items-center gap-2 transform active:translate-y-1 transition-transform cursor-pointer text-white">
+                <span class="text-sm">⚔️</span>
+                <span class="text-[8px] md:text-[10px] font-bold">PVP ARENA</span>
+            </button>
+            <div class="bg-slate-800 pixel-border px-2 py-2 flex items-center gap-1">
+                <span class="text-[8px] text-gray-400">👤</span>
+                <input id="username-display" type="text" value="FOODIE_1" onchange="updateUsername(this.value)" class="bg-transparent text-[8px] text-yellow-300 font-bold focus:outline-none w-20 md:w-28 text-center" maxLength="12" placeholder="SET NAME" />
+            </div>
+            <span id="lb-status-badge" class="hidden text-[6px] bg-green-600 text-white px-1.5 py-0.5 pixel-border-sm font-bold">ON LEADERBOARD</span>
+        </div>
+
+        <!-- Top Right: Ranks, Battle Pass, Skins, Pets Gacha -->
+        <div class="flex flex-wrap items-center gap-2">
+            <button onclick="openLeaderboard()" class="bg-blue-600 hover:bg-blue-500 pixel-border p-2.5 md:p-3 flex items-center gap-1.5 transform active:translate-y-1 transition-transform cursor-pointer text-white">
+                <span class="text-[8px] md:text-[10px]">🏆 RANKS</span>
+            </button>
+            <button onclick="openBattlePass()" class="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 pixel-border p-2.5 md:p-3 flex items-center gap-1.5 transform active:translate-y-1 transition-transform cursor-pointer text-slate-900 font-bold">
+                <span class="text-[8px] md:text-[10px]">🎟️ BATTLE PASS</span>
+            </button>
+            <button onclick="openSkins()" class="bg-emerald-600 hover:bg-emerald-500 pixel-border p-2.5 md:p-3 flex items-center gap-1.5 transform active:translate-y-1 transition-transform cursor-pointer text-white">
+                <span class="text-[8px] md:text-[10px]">👕 SKINS & GACHA</span>
+            </button>
+            <button onclick="openGacha()" class="bg-amber-500 hover:bg-amber-400 pixel-border p-2.5 md:p-3 flex items-center gap-1.5 transform active:translate-y-1 transition-transform cursor-pointer text-slate-900">
+                <span class="text-[8px] md:text-[10px] font-bold">🛒 PETS</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Clicker Stage -->
+    <main class="flex-1 flex flex-col items-center justify-center my-4 w-full max-w-md relative">
+        <!-- Score Board -->
+        <div class="bg-slate-900/90 pixel-border p-4 w-full text-center mb-6 relative">
+            <div class="text-[8px] text-slate-400 uppercase tracking-widest mb-1">Total Score</div>
+            <div id="score-display" class="text-xl md:text-2xl text-yellow-400 font-bold tracking-wider pixel-shadow">0 BITES</div>
+            <div id="bpc-display" class="text-[9px] text-green-400 mt-2 font-bold">+1 Bite / Click</div>
+        </div>
+
+        <!-- Table Setting: Napkin, Fork, Plate, and Knife -->
+        <div class="relative flex items-center justify-center my-2 w-full max-w-md gap-2 sm:gap-4 select-none">
+            
+            <!-- Left: Folded Napkin & Pixel Fork -->
+            <div class="relative flex items-center justify-center flex-shrink-0">
+                <!-- Folded Pixel Napkin Behind Fork -->
+                <div class="absolute -z-0 w-12 sm:w-16 h-28 sm:h-36 bg-slate-50 pixel-border transform -rotate-6 -translate-x-1 border-t-4 border-red-400 flex flex-col justify-around p-1 shadow-md">
+                    <div class="w-full h-0.5 bg-red-300 opacity-80"></div>
+                    <div class="w-full h-0.5 bg-red-300 opacity-80"></div>
+                </div>
+
+                <!-- Pixel Fork -->
+                <svg width="32" height="96" viewBox="0 0 16 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="relative z-10 pixel-shadow transform -rotate-3 hover:scale-105 transition-transform w-7 sm:w-10 h-auto" style="image-rendering: pixelated;">
+                    <!-- Prongs -->
+                    <path d="M2 4h2v14H2V4zm4 0h2v14H6V4zm4 0h2v14h-2V4zm4 0h2v14h-2V4z" fill="#cbd5e1"/>
+                    <path d="M2 4h1v14H2V4zm4 0h1v14H6V4zm4 0h1v14h-1V4zm4 0h1v14h-1V4z" fill="#f8fafc"/>
+                    <!-- Base of prongs -->
+                    <path d="M2 18h14v4H2v-4z" fill="#94a3b8"/>
+                    <!-- Neck -->
+                    <path d="M6 22h4v6H6v-6z" fill="#64748b"/>
+                    <!-- Handle -->
+                    <path d="M6 28h4v16H6V28z" fill="#cbd5e1"/>
+                    <path d="M6 28h1v16H6V28z" fill="#f8fafc"/>
+                    <!-- Handle End -->
+                    <path d="M5 44h6v2H5v-2z" fill="#94a3b8"/>
+                </svg>
+            </div>
+
+            <!-- Center: Interactive Pixel Food Canvas sitting on a Restaurant Plate -->
+            <div class="relative group cursor-pointer flex justify-center items-center p-4 sm:p-6 bg-amber-50/90 pixel-border rounded-full shadow-2xl border-4 border-amber-900/30 z-10" onclick="clickBurger(event)">
+                <div id="food-container" class="transform transition-transform active:scale-95 hover:scale-105 p-1 sm:p-2 flex justify-center items-center">
+                    <!-- Dynamically rendered pixel art food -->
+                    <canvas id="burger-canvas" width="200" height="200" class="pixel-shadow w-36 sm:w-48 h-36 sm:h-48"></canvas>
+                </div>
+            </div>
+
+            <!-- Right: Pixel Knife -->
+            <div class="relative flex items-center justify-center flex-shrink-0">
+                <svg width="32" height="96" viewBox="0 0 16 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="pixel-shadow transform rotate-3 hover:scale-105 transition-transform w-7 sm:w-10 h-auto" style="image-rendering: pixelated;">
+                    <!-- Blade -->
+                    <path d="M10 4C5 8 4 14 4 22h8V4h-2z" fill="#cbd5e1"/>
+                    <path d="M10 4C6 7.5 5 13 5 22h1V5.5L10 4z" fill="#f8fafc"/>
+                    <path d="M11 4h1v18h-1V4z" fill="#64748b"/>
+                    <!-- Bolster/Guard -->
+                    <path d="M6 22h6v4H6v-4z" fill="#475569"/>
+                    <!-- Handle -->
+                    <path d="M6 26h6v18H6V26z" fill="#94a3b8"/>
+                    <path d="M6 26h1v18H6V26z" fill="#cbd5e1"/>
+                    <!-- Handle End -->
+                    <path d="M6 44h6v2H6v-2z" fill="#475569"/>
+                </svg>
+            </div>
+
+        </div>
+
+        <!-- Equipped Pet Display Row -->
+        <div id="active-pets-row" class="flex gap-3 mt-4 items-center justify-center min-h-[48px]">
+            <!-- Rendered by JS -->
+        </div>
+    </main>
+
+    <!-- Bottom Controls & Shop Drawer Button -->
+    <footer class="w-full max-w-4xl flex justify-between items-center gap-3 z-30 pb-2">
+        <button onclick="openCodesModal()" class="bg-indigo-600 hover:bg-indigo-500 pixel-border p-3 text-white text-[9px] font-bold transform active:translate-y-1 transition-transform cursor-pointer">
+            🎫 CODES
+        </button>
+
+        <button onclick="toggleShopDrawer()" class="bg-yellow-500 hover:bg-yellow-400 pixel-border p-3 text-slate-900 text-[10px] font-bold flex items-center gap-2 transform active:translate-y-1 transition-transform cursor-pointer">
+            <span>🏪 BPC UPGRADES SHOP</span>
+        </button>
+    </footer>
+
+    <!-- Upgrades Drawer -->
+    <div id="shop-drawer" class="fixed inset-x-0 bottom-0 z-40 bg-slate-900 pixel-border p-4 transform translate-y-full transition-transform duration-300 max-h-[70vh] flex flex-col">
+        <div class="flex justify-between items-center mb-3 pb-2 border-b-2 border-slate-700">
+            <h3 class="text-[11px] text-yellow-400 font-bold">🏪 BITES PER CLICK UPGRADES</h3>
+            <button onclick="toggleShopDrawer()" class="bg-red-500 text-white pixel-border-sm px-2 py-1 text-[8px] hover:bg-red-600 cursor-pointer">CLOSE X</button>
+        </div>
+        <div id="upgrades-list" class="overflow-y-auto flex-1 grid grid-cols-1 md:grid-cols-2 gap-3 pr-1">
+            <!-- Populated dynamically -->
+        </div>
+    </div>
+
+    <!-- Gacha Mart (Pets) Modal -->
+    <div id="gacha-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-3">
+        <div class="bg-slate-900 border-4 border-amber-500 w-full max-w-2xl pixel-border p-4 flex flex-col max-h-[92vh] relative">
+            <button onclick="closeGacha()" class="absolute top-3 right-3 bg-red-500 pixel-border-sm px-2.5 py-1.5 text-white text-[9px] hover:bg-red-600 cursor-pointer">X</button>
+            <h2 class="text-xs text-amber-400 text-center mb-1">🛒 PET GACHA MART</h2>
+            <p class="text-[7px] text-slate-400 text-center mb-3">Hatch pets to boost your Bites Per Click (BPC)!</p>
+
+            <!-- Selection View -->
+            <div id="gacha-selection" class="flex flex-col gap-3 overflow-y-auto pr-1">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button onclick="startRoll('Common', 50)" class="bg-slate-800 hover:bg-slate-700 pixel-border p-2.5 flex justify-between items-center text-left cursor-pointer border-gray-400">
+                        <div>
+                            <div class="text-[8px] text-gray-300 font-bold">COMMON EGG (0.05% LEGENDARY)</div>
+                            <div class="text-[6px] text-gray-400 mt-1">Cat, Dog, Fish</div>
+                        </div>
+                        <span class="text-[8px] text-yellow-400 font-bold">50 Bites</span>
+                    </button>
+                    <button onclick="startRoll('Uncommon', 1000)" class="bg-slate-800 hover:bg-slate-700 pixel-border p-2.5 flex justify-between items-center text-left cursor-pointer border-green-400">
+                        <div>
+                            <div class="text-[8px] text-green-300 font-bold">UNCOMMON EGG (0.02% LEGENDARY)</div>
+                            <div class="text-[6px] text-gray-400 mt-1">Pigeon, Snake</div>
+                        </div>
+                        <span class="text-[8px] text-yellow-400 font-bold">1k Bites</span>
+                    </button>
+                    <button onclick="startRoll('Epic', 5000)" class="bg-slate-800 hover:bg-slate-700 pixel-border p-2.5 flex justify-between items-center text-left cursor-pointer border-purple-400">
+                        <div>
+                            <div class="text-[8px] text-purple-300 font-bold">EPIC EGG (15% EPIC, 3% LEGENDARY)</div>
+                            <div class="text-[6px] text-gray-400 mt-1">Bear, Mammoth, Snake</div>
+                        </div>
+                        <span class="text-[8px] text-yellow-400 font-bold">5k Bites</span>
+                    </button>
+                    <button onclick="startRoll('Legendary', 100000)" class="bg-slate-800 hover:bg-slate-700 pixel-border p-2.5 flex justify-between items-center text-left cursor-pointer border-yellow-400">
+                        <div>
+                            <div class="text-[8px] text-yellow-300 font-bold">LEGENDARY EGG (8% DRAGON/T-REX)</div>
+                            <div class="text-[6px] text-gray-400 mt-1">Dragon, T-Rex</div>
+                        </div>
+                        <span class="text-[8px] text-yellow-400 font-bold">100k Bites</span>
+                    </button>
+                    <button onclick="startRoll('Galaxy', 500000)" class="bg-indigo-950 hover:bg-indigo-900 pixel-border p-2.5 flex justify-between items-center text-left cursor-pointer border-indigo-400 sm:col-span-2">
+                        <div>
+                            <div class="text-[8px] text-indigo-300 font-bold">🌌 GALAXY PACK (8% SPACE KNIGHT - 10k BPC)</div>
+                            <div class="text-[6px] text-indigo-200 mt-1">Galaxy Fish, Snake, Alien, Space Knight</div>
+                        </div>
+                        <span class="text-[8px] text-yellow-400 font-bold">500k Bites</span>
+                    </button>
+                    <button onclick="startRoll('Skyscraper', 2500000)" class="bg-cyan-950 hover:bg-cyan-900 pixel-border p-2.5 flex justify-between items-center text-left cursor-pointer border-cyan-400 sm:col-span-2">
+                        <div>
+                            <div class="text-[8px] text-cyan-300 font-bold">🗽 SKYSCRAPER PACK (8% STATUE OF LIBERTY)</div>
+                            <div class="text-[6px] text-cyan-200 mt-1">Eiffel Tower, Empire State, Big Ben, Statue of Liberty</div>
+                        </div>
+                        <span class="text-[8px] text-yellow-400 font-bold">2.5M Bites</span>
+                    </button>
+                    <button onclick="startRoll('Greek', 10000000)" class="bg-amber-950 hover:bg-amber-900 pixel-border p-2.5 flex justify-between items-center text-left cursor-pointer border-amber-300 sm:col-span-2">
+                        <div>
+                            <div class="text-[8px] text-amber-300 font-bold">⚡ GREEK PACK (2% ZEUS - 10M BPC!)</div>
+                            <div class="text-[6px] text-amber-200 mt-1">Minotaur, Hydra, Zeus</div>
+                        </div>
+                        <span class="text-[8px] text-yellow-400 font-bold">10M Bites</span>
+                    </button>
+                </div>
+
+                <!-- Pet Inventory & Fusion -->
+                <div class="mt-3 pt-3 border-t border-slate-700">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[8px] text-amber-300 font-bold">YOUR PETS</span>
+                        <button onclick="fusePets()" class="bg-purple-600 hover:bg-purple-500 text-white pixel-border-sm px-2 py-1 text-[7px] font-bold cursor-pointer">
+                            🧪 FUSE (3 COPIES -> LEVEL UP)
+                        </button>
+                    </div>
+                    <div id="pets-inventory-grid" class="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-36 overflow-y-auto">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gacha Roller Track View -->
+            <div id="gacha-roller-view" class="hidden flex-col items-center justify-center my-auto py-6">
+                <div class="relative w-full max-w-sm overflow-hidden bg-slate-950 pixel-border h-28 flex items-center">
+                    <div class="absolute left-1/2 top-0 bottom-0 w-1 bg-red-500 z-20 transform -translate-x-1/2"></div>
+                    <div id="roulette-track" class="flex gap-2 items-center absolute left-0 transition-all">
+                        <!-- Dynamic Roulette Items -->
+                    </div>
+                </div>
+                <div id="gacha-result" class="mt-4 text-center min-h-[24px]"></div>
+                <button id="back-gacha-btn" onclick="resetGachaView()" class="hidden mt-3 bg-amber-500 hover:bg-amber-400 text-slate-900 pixel-border px-4 py-2 text-[8px] font-bold cursor-pointer">
+                    CONTINUE
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Skins Modal -->
+    <div id="skins-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-3">
+        <div class="bg-slate-900 border-4 border-emerald-500 w-full max-w-lg pixel-border p-4 flex flex-col max-h-[90vh] relative">
+            <button onclick="closeSkins()" class="absolute top-3 right-3 bg-red-500 pixel-border-sm px-2.5 py-1.5 text-white text-[9px] hover:bg-red-600 cursor-pointer">X</button>
+            <h2 class="text-xs text-emerald-400 text-center mb-1">👕 SKINS WARDROBE & GACHA</h2>
+            <p class="text-[7px] text-slate-400 text-center mb-3">Roll the Skin Gacha & equip food skins to gain massive Bite boosts!</p>
+            
+            <!-- Skin Gacha Box -->
+            <div class="bg-slate-800 pixel-border p-3 mb-3 flex flex-col items-center justify-center text-center">
+                <div class="text-[9px] text-yellow-300 font-bold mb-1">🎰 SKIN GACHA MACHINE</div>
+                <div id="skin-gacha-result" class="text-[8px] text-emerald-300 font-bold min-h-[16px] my-1">Spin to unlock new food skins!</div>
+                
+                <!-- Skin Roulette Roller View -->
+                <div id="skin-roller-view" class="hidden flex-col items-center justify-center w-full my-2">
+                    <div class="relative w-full max-w-sm overflow-hidden bg-slate-950 pixel-border h-24 flex items-center">
+                        <div class="absolute left-1/2 top-0 bottom-0 w-1 bg-red-500 z-20 transform -translate-x-1/2"></div>
+                        <div id="skin-roulette-track" class="flex gap-2 items-center absolute left-0 transition-all">
+                            <!-- Dynamic Skin Items -->
+                        </div>
+                    </div>
+                    <button id="back-skin-btn" onclick="resetSkinGachaView()" class="hidden mt-3 bg-emerald-500 hover:bg-emerald-400 text-slate-900 pixel-border px-4 py-2 text-[8px] font-bold cursor-pointer">
+                        CONTINUE
+                    </button>
+                </div>
+
+                <div id="skin-gacha-buttons" class="flex gap-2 mt-2 w-full justify-center">
+                    <button onclick="rollSkinGacha(5000)" class="flex-1 max-w-[180px] bg-amber-500 hover:bg-amber-400 text-slate-900 pixel-border-sm p-2 text-[7px] font-bold cursor-pointer transform active:translate-y-0.5">
+                        🎲 ROLL SKIN (5k Bites)<br><span class="text-[6px] text-slate-900 opacity-90">(8% PASTA)</span>
+                    </button>
+                    <button onclick="rollSkinGacha(50000)" class="flex-1 max-w-[180px] bg-purple-600 hover:bg-purple-500 text-white pixel-border-sm p-2 text-[7px] font-bold cursor-pointer transform active:translate-y-0.5">
+                        ✨ DELUXE ROLL (50k Bites)<br><span class="text-[6px] text-purple-200">(15% PASTA)</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="skins-grid" class="grid grid-cols-2 gap-2 overflow-y-auto max-h-[42vh] pr-1">
+                <!-- Rendered by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- PvP Modal -->
+    <div id="pvp-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-3">
+        <div class="bg-slate-900 border-4 border-red-500 w-full max-w-md pixel-border p-4 flex flex-col relative">
+            <button onclick="closePvP()" class="absolute top-3 right-3 bg-red-500 pixel-border-sm px-2.5 py-1.5 text-white text-[9px] hover:bg-red-600 cursor-pointer">X</button>
+            <h2 class="text-xs text-red-400 text-center mb-2">⚔️ PVP EATING CONTEST</h2>
+            
+            <div id="pvp-select-view" class="flex flex-col gap-3">
+                <p class="text-[7px] text-slate-300 text-center">Mash the button faster than your rival to claim the prize!</p>
+                <button onclick="startPvPBot()" class="bg-red-600 hover:bg-red-500 pixel-border p-3 text-white text-[8px] cursor-pointer">
+                    🤖 VS BOT (Entry: 500 Bites -> Win: 1,000)
+                </button>
+                <div class="border-t border-slate-700 my-1"></div>
+                <div class="text-[7px] text-amber-300 text-center">VS FRIEND (LOCAL DUAL)</div>
+                <button onclick="startPvPFriend()" class="bg-orange-600 hover:bg-orange-500 pixel-border p-3 text-white text-[8px] cursor-pointer">
+                    👥 2-PLAYER MASH CONTEST
+                </button>
+            </div>
+
+            <div id="pvp-game-view" class="hidden flex-col items-center gap-4 py-2">
+                <div class="w-full flex justify-between items-center text-[8px]">
+                    <span id="pvp-p1-label" class="text-green-400">YOU</span>
+                    <span id="pvp-p2-label" class="text-red-400">RIVAL</span>
+                </div>
+                <div class="w-full bg-slate-800 pixel-border h-6 relative overflow-hidden">
+                    <div id="pvp-p1-bar" class="bg-green-500 h-full w-0 transition-all duration-75"></div>
+                </div>
+                <div class="w-full bg-slate-800 pixel-border h-6 relative overflow-hidden">
+                    <div id="pvp-p2-bar" class="bg-red-500 h-full w-0 transition-all duration-75"></div>
+                </div>
+                <button id="pvp-mash-btn" onclick="pvpMash()" class="w-full bg-yellow-400 hover:bg-yellow-300 text-slate-900 pixel-border p-4 text-xs font-bold active:translate-y-1 cursor-pointer">
+                    EAT! EAT! EAT! 🍔
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- Battle Pass Modal -->
+    <div id="battlepass-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-3">
+        <div class="bg-slate-900 border-4 border-amber-500 w-full max-w-md pixel-border p-4 flex flex-col max-h-[85vh] relative">
+            <button onclick="closeBattlePass()" class="absolute top-3 right-3 bg-red-500 pixel-border-sm px-2.5 py-1.5 text-white text-[9px] hover:bg-red-600 cursor-pointer">X</button>
+            <h2 class="text-xs text-amber-400 text-center mb-1">🎟️ SEASON 1 BATTLE PASS</h2>
+            <p class="text-[7px] text-slate-400 text-center mb-3">Eat bites & reach milestones to unlock exclusive tier rewards!</p>
+            <div id="battlepass-list" class="flex flex-col gap-2 overflow-y-auto mt-1 pr-1">
+                <!-- Rendered by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaderboard Modal -->
+    <div id="leaderboard-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-3">
+        <div class="bg-slate-900 border-4 border-blue-500 w-full max-w-md pixel-border p-4 flex flex-col relative">
+            <button onclick="closeLeaderboard()" class="absolute top-3 right-3 bg-red-500 pixel-border-sm px-2.5 py-1.5 text-white text-[9px] hover:bg-red-600 cursor-pointer">X</button>
+            <h2 class="text-xs text-blue-400 text-center mb-3">🏆 GLOBAL RANKS</h2>
+            <div id="leaderboard-list" class="flex flex-col gap-2">
+                <!-- Rendered by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Codes Modal -->
+    <div id="codes-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-3">
+        <div class="bg-slate-900 border-4 border-indigo-500 w-full max-w-xs pixel-border p-4 flex flex-col relative">
+            <button onclick="closeCodesModal()" class="absolute top-2 right-2 bg-red-500 pixel-border-sm px-2 py-1 text-white text-[8px] hover:bg-red-600 cursor-pointer">X</button>
+            <h2 class="text-xs text-indigo-400 text-center mb-2">🎫 REDEEM CODES</h2>
+            <input id="code-input" type="text" placeholder="Enter Code..." class="bg-slate-800 border-2 border-indigo-400 p-2 text-[8px] text-white text-center uppercase focus:outline-none mb-3 pixel-border-sm" />
+            <button onclick="submitCode()" class="bg-indigo-600 hover:bg-indigo-500 text-white pixel-border p-2 text-[8px] font-bold cursor-pointer">REDEEM</button>
+            <div id="code-msg" class="text-[7px] text-center mt-2 min-h-[12px]"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'food-clicker';
+        let db = null;
+        let auth = null;
+        let currentUser = null;
+        let liveLeaderboard = [];
+
+        if (typeof __firebase_config !== 'undefined') {
+            try {
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                async function initCloud() {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            const res = await signInWithCustomToken(auth, __initial_auth_token);
+                            currentUser = res.user;
+                        } else {
+                            const res = await signInAnonymously(auth);
+                            currentUser = res.user;
+                        }
+                        listenToLeaderboard();
+                    } catch (e) {
+                        console.error("Auth init error:", e);
+                    }
+                }
+                initCloud();
+            } catch (e) {
+                console.error("Firebase init error:", e);
+            }
+        }
+
+        function listenToLeaderboard() {
+            if (!db) return;
+            const lbRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
+            onSnapshot(lbRef, (snapshot) => {
+                const entries = [];
+                snapshot.forEach((docSnap) => {
+                    entries.push(docSnap.data());
+                });
+                // Sort in memory (Rule 2)
+                entries.sort((a, b) => (b.score || 0) - (a.score || 0));
+                liveLeaderboard = entries;
+
+                if (window.isLeaderboardOpen) {
+                    window.renderLeaderboard();
+                }
+            }, (err) => {
+                console.error("Leaderboard error:", err);
+            });
+        }
+
+        async function syncUserToCloud(name, currentScore) {
+            if (!db || !currentUser) return;
+            try {
+                const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', currentUser.uid);
+                await setDoc(userDocRef, {
+                    uid: currentUser.uid,
+                    name: name,
+                    score: currentScore,
+                    updatedAt: Date.now()
+                }, { merge: true });
+            } catch (e) {
+                console.error("Failed to sync score:", e);
+            }
+        }
+
+        window.getLiveLeaderboard = () => liveLeaderboard;
+        window.getCloudUser = () => currentUser;
+        window.syncUserToCloud = syncUserToCloud;
+    </script>
+
+    <script>
+        // Anti-Cheat Engine (Anti-Hack: CPS Rate Limiting, Auto-Clicker Pattern Analysis, Console Memory Watchdog)
+        const AntiCheatEngine = (() => {
+            const SECRET_SALT = "FOOD_CLICKER_SECURE_SALT_2026_V2_PROT";
+            const SAVE_VERSION = "v2_0_UPDATE_FORCE_RESET_2026";
+            let clickCountWindow = 0;
+            let windowResetTimer = Date.now();
+            let clickTimestamps = [];
+            let shadowScore = 0;
+            let shadowBpc = 1;
+            let activeWatchdog = false;
+            let lastX = -1;
+            let lastY = -1;
+            let identicalCoordCount = 0;
+            let lastRealTime = Date.now();
+            let lastPerfTime = performance.now();
+
+            // Generate HMAC/Hash for save integrity verification
+            function computeHash(str) {
+                let hash = 0;
+                const combined = str + SECRET_SALT + navigator.userAgent;
+                for (let i = 0; i < combined.length; i++) {
+                    const char = combined.charCodeAt(i);
+                    hash = (hash << 5) - hash + char;
+                    hash |= 0;
+                }
+                return hash.toString(36);
+            }
+
+            // Detect robotic rhythm (auto-clicker scripts with exact millisecond gaps)
+            function isRoboticRhythm(timestamps) {
+                if (timestamps.length < 8) return false;
+                const intervals = [];
+                for (let i = 1; i < timestamps.length; i++) {
+                    intervals.push(timestamps[i] - timestamps[i - 1]);
+                }
+                const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+                const variance = intervals.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / intervals.length;
+                const stdDev = Math.sqrt(variance);
+                
+                // Extremely low standard deviation (< 2.5ms variance across 8+ clicks) indicates script execution
+                return stdDev < 2.5 && mean < 120;
+            }
+
+            // Detect identical click coordinate macro locks
+            function isStaticCoordinate(x, y) {
+                if (x === lastX && y === lastY && x !== 0 && y !== 0) {
+                    identicalCoordCount++;
+                } else {
+                    identicalCoordCount = 0;
+                    lastX = x;
+                    lastY = y;
+                }
+                return identicalCoordCount > 8;
+            }
+
+            // Speedhack / Clock alteration detector
+            function checkSpeedhack() {
+                const nowReal = Date.now();
+                const nowPerf = performance.now();
+                const realDelta = nowReal - lastRealTime;
+                const perfDelta = nowPerf - lastPerfTime;
+
+                lastRealTime = nowReal;
+                lastPerfTime = nowPerf;
+
+                // If real-time delta drastically diverges from monotonic performance delta (> 3500ms jump)
+                if (Math.abs(realDelta - perfDelta) > 3500 && realDelta > 0) {
+                    triggerAccountReset("SPEEDHACK / TIME TAMPERING DETECTED! System clock acceleration detected.");
+                    return true;
+                }
+                return false;
+            }
+
+            // Click rate & behavior validation
+            function validateClick(currentScore, currentBpc) {
+                if (checkSpeedhack()) return false;
+
+                // Sync internal shadow variables
+                shadowScore = currentScore + currentBpc;
+                shadowBpc = currentBpc;
+                return true;
+            }
+
+            // Sync shadow memory when legitimate score updates happen
+            function syncShadow(newScore, newBpc) {
+                shadowScore = newScore;
+                shadowBpc = newBpc;
+            }
+
+            // Continuous Memory Guard & Speedhack Loop
+            function startMemoryWatchdog() {
+                if (activeWatchdog) return;
+                activeWatchdog = true;
+                
+                setInterval(() => {
+                    checkSpeedhack();
+                    if (typeof score === 'undefined') return;
+
+                    // If score jumped unexpectedly higher than shadow tracking allowed
+                    if (score > shadowScore + (bpc * 2) + 100) {
+                        triggerAccountReset("CONSOLE MEMORY EDIT DETECTED! Direct modification of score variable.");
+                    } else if (score < shadowScore) {
+                        shadowScore = score;
+                    }
+                }, 1000);
+            }
+
+            return {
+                init: () => {
+                    localStorage.removeItem('FOOD_CLICKER_TIMEOUT');
+                    startMemoryWatchdog();
+                },
+                validateClick,
+                syncShadow,
+                computeHash,
+                isStaticCoordinate,
+                SAVE_VERSION
+            };
+        })();
+
+        // Hard Reset & Account Wipe Handler
+        function triggerAccountReset(reason) {
+            // Wiping local storage save
+            localStorage.removeItem('FOOD_CLICKER_SAVE');
+
+            // Resetting in-memory state to zero
+            score = 0;
+            totalClicks = 0;
+            bpc = 1;
+            ownedPets = [];
+            ownedSkins = ["Burger"];
+            activeSkinId = "Burger";
+            usedCodes = [];
+            claimedAchievements = [];
+            upgrades.forEach(u => u.count = 0);
+
+            AntiCheatEngine.syncShadow(0, 1);
+
+            // Display lockdown modal
+            const modal = document.getElementById('anticheat-modal');
+            const reasonEl = document.getElementById('anticheat-reason');
+            if (reasonEl) reasonEl.innerText = reason;
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+
+            updateDisplay();
+        }
+
+        function dismissAntiCheatModal() {
+            const modal = document.getElementById('anticheat-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+            location.reload();
+        }
+
+        // Honeypot traps for console hackers trying window.score / window.bpc
+        ['score', 'bpc', 'totalClicks', 'ownedPets', 'upgrades'].forEach(prop => {
+            try {
+                Object.defineProperty(window, prop, {
+                    get() { 
+                        triggerAccountReset(`CONSOLE HONEYPOT TRIGGERED: Attempted to access or read window.${prop}`);
+                        return 0; 
+                    },
+                    set(v) { 
+                        triggerAccountReset(`CONSOLE HONEYPOT TRIGGERED: Attempted to overwrite window.${prop} via DevTools`); 
+                    },
+                    configurable: false
+                });
+            } catch(e) {}
+        });
+
+        const upgrades = [
+            { id: 'fork', name: 'Plastic Fork', baseCost: 15, addBpc: 1, count: 0 },
+            { id: 'spoon', name: 'Golden Spoon', baseCost: 100, addBpc: 5, count: 0 },
+            { id: 'chef_hat', name: "Chef's Hat", baseCost: 1100, addBpc: 25, count: 0 },
+            { id: 'diner_seat', name: 'Diner Booth', baseCost: 12000, addBpc: 100, count: 0 },
+            { id: 'kitchen', name: 'Commercial Grill', baseCost: 130000, addBpc: 500, count: 0 },
+            { id: 'factory', name: 'Food Factory', baseCost: 1400000, addBpc: 3000, count: 0 },
+            { id: 'palace', name: 'Feast Palace', baseCost: 20000000, addBpc: 20000, count: 0 }
+        ];
+
+        const foodArt = {
+            "Burger": {
+                matrix: [
+                    ".....dSSSSd.....",
+                    "...dSSsSsSSSd...",
+                    "..dSWsSSSsWSSSd.",
+                    ".dSSSSsWSSSSSSsd",
+                    ".dSSSSsSSSSsSSSd",
+                    ".LLlLLlLllLLlLlL",
+                    "LLllLLllLLllLLLL",
+                    ".TTTTtTTTTtTTTT.",
+                    ".CCCCCCCCCCCCCC.",
+                    "..C.CCCCcC.CCCC.",
+                    "PPPPpPPPPPPpPPPP",
+                    "pPPPPPPPPpPPPPPP",
+                    ".BBBBBBBBBBBBBB.",
+                    "..dBBBBBBBBBBBd.",
+                    "....bbbbbbbb...."
+                ],
+                colors: {
+                    'S': '#f59e0b',
+                    's': '#fef08a',
+                    'd': '#b45309',
+                    'W': '#ffffff',
+                    'L': '#22c55e',
+                    'l': '#15803d',
+                    'T': '#ef4444',
+                    't': '#fca5a5',
+                    'C': '#eab308',
+                    'c': '#fef08a',
+                    'P': '#78350f',
+                    'p': '#451a03',
+                    'B': '#d97706',
+                    'b': '#92400e'
+                }
+            },
+            "Fries": {
+                matrix: [
+                    ".Y.Y.Y.Y.",
+                    ".Y.Y.Y.Y.",
+                    "YYYYYYYYY",
+                    "RRRRRRRRR",
+                    ".RRRRRRR.",
+                    ".RRRRRRR.",
+                    "..RRRRR.."
+                ],
+                colors: { 'Y': '#facc15', 'R': '#dc2626' }
+            },
+            "Donut": {
+                matrix: [
+                    "..PPPP..",
+                    ".PWWWWP.",
+                    "PW....WP",
+                    "PW....WP",
+                    ".PWWWWP.",
+                    "..PPPP.."
+                ],
+                colors: { 'P': '#ec4899', 'W': '#fdf2f8' }
+            },
+            "Pizza": {
+                matrix: [
+                    "...YYYY...",
+                    "..YYYYYY..",
+                    ".YRRRRRRY.",
+                    "YRRRRRRRRY",
+                    "YRRRRRRRRY",
+                    ".YYYYYYYY."
+                ],
+                colors: { 'Y': '#f59e0b', 'R': '#dc2626' }
+            },
+            "Hotdog": {
+                matrix: [
+                    ".SSSSSS.",
+                    "SRRRRRRS",
+                    "SYYYYYYS",
+                    "SRRRRRRS",
+                    ".SSSSSS."
+                ],
+                colors: { 'S': '#d97706', 'R': '#b91c1c', 'Y': '#facc15' }
+            },
+            "BirthdayCake": {
+                matrix: [
+                    "...C.C...",
+                    "..FFFFF..",
+                    ".WWWWWWW.",
+                    "PPPPPPPPP",
+                    "WWWWWWWWW"
+                ],
+                colors: { 'C': '#ef4444', 'F': '#fde047', 'W': '#ffffff', 'P': '#f472b6' }
+            },
+            "Pasta": {
+                matrix: [
+                    "..GG..",
+                    ".RRYYR.",
+                    "YYYYYYYY",
+                    "YYYYYYYY",
+                    ".WWWWWW."
+                ],
+                colors: { 'G': '#15803d', 'R': '#dc2626', 'Y': '#facc15', 'W': '#cbd5e1' }
+            }
+        };
+
+        function drawPetIcon(canvasId, petId) {
+            const data = petArt[petId];
+            if (data && data.matrix) {
+                drawPixelArt(canvasId, data.matrix, data.colors, 6);
+            }
+        }
+
+        function fusePets() {
+            const counts = {};
+            ownedPets.forEach(p => {
+                const key = `${p.id}_${p.level || 1}`;
+                counts[key] = (counts[key] || 0) + 1;
+            });
+
+            let fusedAny = false;
+            for (const key in counts) {
+                if (counts[key] >= 3) {
+                    const [id, lvlStr] = key.split('_');
+                    const lvl = parseInt(lvlStr);
+                    let removed = 0;
+                    ownedPets = ownedPets.filter(p => {
+                        if (p.id === id && (p.level || 1) === lvl && removed < 3) {
+                            removed++;
+                            return false;
+                        }
+                        return true;
+                    });
+                    ownedPets.push({ id, level: lvl + 1 });
+                    fusedAny = true;
+                    break;
+                }
+            }
+
+            if (fusedAny) {
+                renderPetsInventory();
+                updateDisplay();
+                savePlayerData();
+            }
+        }
+
+        let score = 0;
+        let totalClicks = 0;
+        let bpc = 1;
+        let username = "FOODIE_1";
+        let hasJoinedLeaderboard = false;
+        let isLeaderboardOpen = false;
+
+        let ownedPets = [];
+        let ownedSkins = ["Burger"];
+        let activeSkinId = "Burger";
+        let usedCodes = [];
+        let claimedAchievements = [];
+
+        // Pixel Art Canvas Helper
+        function drawPixelArt(canvasId, matrix, colors, pixelSize = 10) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const rows = matrix.length;
+            const cols = matrix[0].length;
+            canvas.width = cols * pixelSize;
+            canvas.height = rows * pixelSize;
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const symbol = matrix[r][c];
+                    if (symbol !== '.' && colors[symbol]) {
+                        ctx.fillStyle = colors[symbol];
+                        ctx.fillRect(c * pixelSize, r * pixelSize, pixelSize, pixelSize);
+                    }
+                }
+            }
+        }
+
+        // Pixel Art for Pets
+        const petArt = {
+            "Cat": {
+                matrix: [
+                    "1..1",
+                    "1111",
+                    "1O1O",
+                    "1111",
+                    ".11."
+                ],
+                colors: { '1': '#f97316', 'O': '#ffffff' }
+            },
+            "Dog": {
+                matrix: [
+                    "1..1",
+                    "1111",
+                    "1B1B",
+                    "1111",
+                    ".1R."
+                ],
+                colors: { '1': '#a16207', 'B': '#000000', 'R': '#ef4444' }
+            },
+            "Fish": {
+                matrix: [
+                    "....11..",
+                    "..11111.",
+                    "111O1111",
+                    "..11111.",
+                    "....11.."
+                ],
+                colors: { '1': '#38bdf8', 'O': '#ffffff' }
+            },
+            "Pigeon": {
+                matrix: [
+                    "..11",
+                    ".111",
+                    "11O1",
+                    "YYYY",
+                    ".1.1"
+                ],
+                colors: { '1': '#64748b', 'O': '#000000', 'Y': '#eab308' }
+            },
+            "Snake": {
+                matrix: [
+                    ".111.",
+                    "11O11",
+                    "..11.",
+                    ".11..",
+                    "11111"
+                ],
+                colors: { '1': '#22c55e', 'O': '#ef4444' }
+            },
+            "Bear": {
+                matrix: [
+                    "1..1",
+                    "1111",
+                    "1B1B",
+                    ".11.",
+                    "1111"
+                ],
+                colors: { '1': '#78350f', 'B': '#000000' }
+            },
+            "Mammoth": {
+                matrix: [
+                    "11...11.",
+                    ".111111.",
+                    ".11W1W1.",
+                    "..1111..",
+                    ".11..11."
+                ],
+                colors: { '1': '#78350f', 'W': '#f8fafc' }
+            },
+            "Dragon": {
+                matrix: [
+                    "11..11",
+                    "1GGGG1",
+                    "1GOGOG",
+                    ".GGGG.",
+                    "1RRRR1"
+                ],
+                colors: { '1': '#15803d', 'G': '#22c55e', 'O': '#facc15', 'R': '#dc2626' }
+            },
+            "TRex": {
+                matrix: [
+                    "..1111.",
+                    "..1GOG1",
+                    "..1111.",
+                    "11111..",
+                    ".1..1.."
+                ],
+                colors: { '1': '#16a34a', 'G': '#86efac', 'O': '#ffffff' }
+            },
+            "GalaxyFish": {
+                matrix: [
+                    "..11..",
+                    ".11111",
+                    "111O11",
+                    ".11111",
+                    "..11.."
+                ],
+                colors: { '1': '#818cf8', 'O': '#c084fc' }
+            },
+            "GalaxySnake": {
+                matrix: [
+                    ".111.",
+                    "11O11",
+                    "..11.",
+                    ".11..",
+                    "11111"
+                ],
+                colors: { '1': '#a855f7', 'O': '#f43f5e' }
+            },
+            "Alien": {
+                matrix: [
+                    ".111.",
+                    "11111",
+                    "1B1B1",
+                    ".111.",
+                    "..1.."
+                ],
+                colors: { '1': '#4ade80', 'B': '#000000' }
+            },
+            "SpaceKnight": {
+                matrix: [
+                    "..11..",
+                    ".1111.",
+                    "11B111",
+                    ".1111.",
+                    "1.11.1"
+                ],
+                colors: { '1': '#38bdf8', 'B': '#facc15' }
+            },
+            "EiffelTower": {
+                matrix: [
+                    "...1...",
+                    "..111..",
+                    "..1.1..",
+                    ".11111.",
+                    "11...11"
+                ],
+                colors: { '1': '#94a3b8' }
+            },
+            "EmpireState": {
+                matrix: [
+                    "...1...",
+                    "..111..",
+                    "..111..",
+                    ".11111.",
+                    ".11111."
+                ],
+                colors: { '1': '#38bdf8' }
+            },
+            "BigBen": {
+                matrix: [
+                    "..1..",
+                    ".111.",
+                    ".1O1.",
+                    ".111.",
+                    "11111"
+                ],
+                colors: { '1': '#f59e0b', 'O': '#ffffff' }
+            },
+            "StatueOfLiberty": {
+                matrix: [
+                    "..1..",
+                    ".111.",
+                    "11O11",
+                    ".111.",
+                    ".111."
+                ],
+                colors: { '1': '#2dd4bf', 'O': '#fde047' }
+            },
+            "Minotaur": {
+                matrix: [
+                    "1...1",
+                    "11111",
+                    "1R1R1",
+                    ".111.",
+                    "11.11"
+                ],
+                colors: { '1': '#b45309', 'R': '#ef4444' }
+            },
+            "Hydra": {
+                matrix: [
+                    "1.1.1",
+                    "11111",
+                    "1G1G1",
+                    ".111.",
+                    ".111."
+                ],
+                colors: { '1': '#047857', 'G': '#a7f3d0' }
+            },
+            "Zeus": {
+                matrix: [
+                    "..Y..",
+                    ".YYY.",
+                    "YYOYY",
+                    ".YYY.",
+                    "..Y.."
+                ],
+                colors: { 'Y': '#facc15', 'O': '#ffffff' }
+            }
+        };
+
+        const packPetPools = {
+            'Common': ['Cat', 'Dog', 'Fish', 'Pigeon'],
+            'Uncommon': ['Pigeon', 'Snake', 'Dog', 'Cat'],
+            'Epic': ['Bear', 'Mammoth', 'Snake', 'Pigeon'],
+            'Legendary': ['Dragon', 'TRex', 'Mammoth', 'Bear'],
+            'Galaxy': ['GalaxyFish', 'GalaxySnake', 'Alien', 'SpaceKnight'],
+            'Skyscraper': ['EiffelTower', 'EmpireState', 'BigBen', 'StatueOfLiberty'],
+            'Greek': ['Minotaur', 'Hydra', 'Zeus']
+        };
+
+        const allPets = {
+            "Cat": { name: "Cat", bpc: 5, emoji: "🐱", rarity: "Common" },
+            "Dog": { name: "Dog", bpc: 10, emoji: "🐶", rarity: "Common" },
+            "Fish": { name: "Fish", bpc: 15, emoji: "🐟", rarity: "Common" },
+            "Pigeon": { name: "Pigeon", bpc: 25, emoji: "🐦", rarity: "Uncommon" },
+            "Snake": { name: "Snake", bpc: 60, emoji: "🐍", rarity: "Uncommon" },
+            "Bear": { name: "Bear", bpc: 100, emoji: "🐻", rarity: "Epic" },
+            "Mammoth": { name: "Mammoth", bpc: 400, emoji: "🦣", rarity: "Epic" },
+            "Dragon": { name: "Dragon", bpc: 1000, emoji: "🐉", rarity: "Legendary" },
+            "TRex": { name: "T-Rex", bpc: 2500, emoji: "🦖", rarity: "Legendary" },
+            "GalaxyFish": { name: "Galaxy Fish", bpc: 50, emoji: "🐠", rarity: "Galaxy" },
+            "GalaxySnake": { name: "Galaxy Snake", bpc: 150, emoji: "🐍", rarity: "Galaxy" },
+            "Alien": { name: "Alien", bpc: 350, emoji: "👽", rarity: "Galaxy" },
+            "SpaceKnight": { name: "Space Knight", bpc: 10000, emoji: "⚔️", rarity: "Galaxy" },
+            "EiffelTower": { name: "Eiffel Tower", bpc: 250, emoji: "🗼", rarity: "Skyscraper" },
+            "EmpireState": { name: "Empire State", bpc: 800, emoji: "🏢", rarity: "Skyscraper" },
+            "BigBen": { name: "Big Ben", bpc: 3000, emoji: "🕰️", rarity: "Skyscraper" },
+            "StatueOfLiberty": { name: "Statue of Liberty", bpc: 16667, emoji: "🗽", rarity: "Skyscraper" },
+            "Minotaur": { name: "Minotaur", bpc: 5000, emoji: "🐂", rarity: "Greek" },
+            "Hydra": { name: "Hydra", bpc: 100000, emoji: "🐉", rarity: "Greek" },
+            "Zeus": { name: "Zeus ⚡", bpc: 10000000, emoji: "⚡", rarity: "Greek" }
+        };
+
+        const rarityColors = {
+            'Common': { text: 'text-slate-300', border: 'border-slate-400' },
+            'Uncommon': { text: 'text-green-400', border: 'border-green-500' },
+            'Epic': { text: 'text-purple-400', border: 'border-purple-500' },
+            'Legendary': { text: 'text-amber-400', border: 'border-amber-400' },
+            'Galaxy': { text: 'text-indigo-400', border: 'border-indigo-400' },
+            'Skyscraper': { text: 'text-cyan-400', border: 'border-cyan-400' },
+            'Greek': { text: 'text-yellow-300', border: 'border-yellow-300' }
+        };
+
+        const skinsInfo = {
+            "Burger": { name: "Burger", bpcBoost: 0, desc: "Default Food", rarity: "Common" },
+            "Fries": { name: "Fries", bpcBoost: 10, desc: "+10 BPC (Code FRIES)", rarity: "Special" },
+            "Donut": { name: "Donut", bpcBoost: 50, desc: "+50 BPC Boost", rarity: "Rare" },
+            "Pizza": { name: "Pizza", bpcBoost: 200, desc: "+200 BPC Boost", rarity: "Epic" },
+            "Hotdog": { name: "Hotdog", bpcBoost: 100, desc: "+100 BPC (Battle Pass)", rarity: "Rare" },
+            "BirthdayCake": { name: "Birthday Cake", bpcBoost: 5000, desc: "+5,000 BPC Boost", rarity: "Special" },
+            "Pasta": { name: "Pasta", bpcBoost: 10000, desc: "+10,000 BPC Boost", rarity: "Legendary" }
+        };
+
+        const battlePassTiers = [
+            { tier: 1, title: "Tier 1: Appetizer", desc: "Reach 1 Click", rewardText: "50 Bites", reward: 50, type: "bites", check: () => totalClicks >= 1 },
+            { tier: 2, title: "Tier 2: Fast Eater", desc: "Reach 100 Clicks", rewardText: "500 Bites", reward: 500, type: "bites", check: () => totalClicks >= 100 },
+            { tier: 3, title: "Tier 3: Hotdog Special", desc: "Reach 1,000 Clicks", rewardText: "Hotdog Skin + 5k Bites", reward: 5000, type: "skin_hotdog", check: () => totalClicks >= 1000 },
+            { tier: 4, title: "Tier 4: Feast Master", desc: "Reach 1,000,000 Bites", rewardText: "250,000 Bites", reward: 250000, type: "bites", check: () => score >= 1000000 },
+            { tier: 5, title: "Tier 5: Divine Diner", desc: "Hatch Zeus from Greek Pack", rewardText: "10,000,000 Bites", reward: 10000000, type: "bites", check: () => ownedPets.some(p => p.id === 'Zeus') }
+        ];
+
+        function formatNumber(num) {
+            if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+            if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+            if (num >= 1e3) return (num / 1e3).toFixed(1) + 'k';
+            return num.toLocaleString();
+        }
+
+        function calculateBPC() {
+            let total = 1;
+            upgrades.forEach(u => { total += u.count * u.addBpc; });
+            ownedPets.forEach(p => {
+                const base = allPets[p.id]?.bpc || 0;
+                total += base * Math.pow(4, (p.level || 1) - 1);
+            });
+            const skinBonus = skinsInfo[activeSkinId]?.bpcBoost || 0;
+            total += skinBonus;
+            bpc = total;
+            return bpc;
+        }
+
+        function updateDisplay() {
+            calculateBPC();
+            document.getElementById('score-display').innerText = `${formatNumber(score)} BITES`;
+            document.getElementById('bpc-display').innerText = `+${formatNumber(bpc)} Bite / Click`;
+            renderUpgrades();
+            renderActivePetsRow();
+
+            // Sync shadow state with anti-cheat protection engine
+            AntiCheatEngine.syncShadow(score, bpc);
+
+            // Sync score to cloud leaderboard if player has set their username
+            if (hasJoinedLeaderboard && window.syncUserToCloud) {
+                window.syncUserToCloud(username, score);
+            }
+        }
+
+        function clickBurger(event) {
+            // 1. Synthetic Event Check (Bot scripts calling click() or dispatchEvent)
+            if (!event || event.isTrusted === false) {
+                triggerAccountReset("SYNTHETIC EVENT DETECTED! Un-trusted click event triggered.");
+                return;
+            }
+
+            // Validate click against Anti-Cheat module
+            if (!AntiCheatEngine.validateClick(score, bpc)) return;
+
+            score += bpc;
+            totalClicks++;
+
+            // Create floating click text
+            const floatText = document.createElement('div');
+            floatText.className = 'floating-text text-yellow-300';
+            floatText.innerText = `+${formatNumber(bpc)}`;
+            floatText.style.left = `${event.clientX - 20}px`;
+            floatText.style.top = `${event.clientY - 30}px`;
+            document.body.appendChild(floatText);
+            setTimeout(() => floatText.remove(), 800);
+
+            // Unlock Hotdog skin achievement automatically if applicable
+            if (totalClicks >= 1000 && !ownedSkins.includes("Hotdog")) {
+                ownedSkins.push("Hotdog");
+            }
+
+            updateDisplay();
+            savePlayerData();
+        }
+
+        function renderUpgrades() {
+            const list = document.getElementById('upgrades-list');
+            if (!list) return;
+            list.innerHTML = '';
+
+            upgrades.forEach(u => {
+                const cost = Math.floor(u.baseCost * Math.pow(1.15, u.count));
+                const canAfford = score >= cost;
+
+                const item = document.createElement('div');
+                item.className = `p-3 pixel-border flex justify-between items-center ${canAfford ? 'bg-slate-800' : 'bg-slate-900 opacity-60'}`;
+                item.innerHTML = `
+                    <div>
+                        <div class="text-[9px] text-white font-bold">${u.name} (${u.count})</div>
+                        <div class="text-[7px] text-green-400 mt-1">+${formatNumber(u.addBpc)} BPC</div>
+                    </div>
+                    <button onclick="buyUpgrade('${u.id}')" class="px-3 py-2 text-[8px] font-bold ${canAfford ? 'bg-yellow-500 hover:bg-yellow-400 text-slate-900 cursor-pointer' : 'bg-slate-700 text-gray-500'} pixel-border-sm">
+                        ${formatNumber(cost)} B
+                    </button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function buyUpgrade(id) {
+            const u = upgrades.find(up => up.id === id);
+            if (!u) return;
+            const cost = Math.floor(u.baseCost * Math.pow(1.15, u.count));
+            if (score >= cost) {
+                score -= cost;
+                u.count++;
+                updateDisplay();
+                savePlayerData();
+            }
+        }
+
+        function renderActivePetsRow() {
+            const row = document.getElementById('active-pets-row');
+            if (!row) return;
+            row.innerHTML = '';
+
+            ownedPets.slice(0, 5).forEach((p, idx) => {
+                const info = allPets[p.id];
+                if (!info) return;
+                const rarity = info.rarity || 'Common';
+                const colors = rarityColors[rarity] || rarityColors['Common'];
+                const petEl = document.createElement('div');
+                petEl.className = `bg-slate-800 border-2 ${colors.border} pixel-border-sm p-1.5 flex items-center gap-1.5 text-[8px]`;
+                const canvasId = `active-pet-cvs-${idx}`;
+                petEl.innerHTML = `
+                    <canvas id="${canvasId}" class="pixel-pet-canvas"></canvas>
+                    <div class="flex flex-col">
+                        <span class="${colors.text} font-bold text-[7px]">${info.name}</span>
+                        <div class="flex items-center gap-1">
+                            <span class="text-yellow-300 font-bold text-[6px]">L${p.level || 1}</span>
+                            <span class="${colors.text} text-[6px] font-bold uppercase">[${rarity}]</span>
+                        </div>
+                    </div>
+                `;
+                row.appendChild(petEl);
+                setTimeout(() => drawPetIcon(canvasId, p.id), 10);
+            });
+        }
+
+        function openGacha() {
+            document.getElementById('gacha-modal').classList.remove('hidden');
+            document.getElementById('gacha-modal').classList.add('flex');
+            resetGachaView();
+            renderPetsInventory();
+        }
+
+        function closeGacha() {
+            document.getElementById('gacha-modal').classList.add('hidden');
+            document.getElementById('gacha-modal').classList.remove('flex');
+        }
+
+        function resetGachaView() {
+            document.getElementById('gacha-selection').classList.remove('hidden');
+            document.getElementById('gacha-roller-view').classList.add('hidden');
+            document.getElementById('gacha-roller-view').classList.remove('flex');
+        }
+
+        function startRoll(packType, cost) {
+            if (score < cost) return;
+            score -= cost;
+            updateDisplay();
+
+            document.getElementById('gacha-selection').classList.add('hidden');
+            document.getElementById('gacha-roller-view').classList.remove('hidden');
+            document.getElementById('gacha-roller-view').classList.add('flex');
+            document.getElementById('back-gacha-btn').classList.add('hidden');
+            document.getElementById('gacha-result').innerText = '';
+
+            const track = document.getElementById('roulette-track');
+            track.innerHTML = '';
+
+            // Restrict roulete preview items strictly to the chosen pack pool
+            const currentPool = packPetPools[packType] || Object.keys(allPets);
+            const items = [];
+            for (let i = 0; i < 35; i++) {
+                const k = currentPool[Math.floor(Math.random() * currentPool.length)];
+                items.push({ id: k, ...allPets[k] });
+            }
+
+            // Determine winner based on requested probabilities
+            let winnerKey = 'Cat';
+            const rand = Math.random() * 100;
+
+            if (packType === 'Greek') {
+                winnerKey = rand < 2 ? 'Zeus' : (rand < 10 ? 'Hydra' : 'Minotaur');
+            } else if (packType === 'Skyscraper') {
+                winnerKey = rand < 8 ? 'StatueOfLiberty' : (rand < 30 ? 'BigBen' : (rand < 60 ? 'EmpireState' : 'EiffelTower'));
+            } else if (packType === 'Galaxy') {
+                winnerKey = rand < 8 ? 'SpaceKnight' : (rand < 30 ? 'Alien' : (rand < 60 ? 'GalaxySnake' : 'GalaxyFish'));
+            } else if (packType === 'Legendary') {
+                if (rand < 8) winnerKey = Math.random() < 0.5 ? 'Dragon' : 'TRex';
+                else if (rand < 35) winnerKey = Math.random() < 0.5 ? 'Mammoth' : 'Bear';
+                else winnerKey = Math.random() < 0.5 ? 'Pigeon' : 'Snake';
+            } else if (packType === 'Epic') {
+                if (rand < 3) winnerKey = Math.random() < 0.5 ? 'Dragon' : 'TRex';
+                else if (rand < 18) winnerKey = Math.random() < 0.5 ? 'Mammoth' : 'Bear'; // 15% Epic rate
+                else if (rand < 55) winnerKey = 'Snake';
+                else winnerKey = 'Pigeon';
+            } else if (packType === 'Uncommon') {
+                if (rand < 0.02) winnerKey = Math.random() < 0.5 ? 'Dragon' : 'TRex';
+                else if (rand < 3.02) winnerKey = Math.random() < 0.5 ? 'Mammoth' : 'Bear';
+                else if (rand < 35) winnerKey = 'Snake';
+                else if (rand < 70) winnerKey = 'Pigeon';
+                else winnerKey = Math.random() < 0.5 ? 'Cat' : 'Fish';
+            } else {
+                // Common Egg: 0.05% Legendary, 0.5% Epic, 10% Uncommon, rest Common animals
+                if (rand < 0.05) winnerKey = Math.random() < 0.5 ? 'Dragon' : 'TRex';
+                else if (rand < 0.55) winnerKey = Math.random() < 0.5 ? 'Mammoth' : 'Bear';
+                else if (rand < 10.55) winnerKey = Math.random() < 0.5 ? 'Pigeon' : 'Snake';
+                else winnerKey = ['Cat', 'Dog', 'Fish'][Math.floor(Math.random() * 3)];
+            }
+
+            items[28] = { id: winnerKey, ...allPets[winnerKey] };
+
+            items.forEach((item, idx) => {
+                const el = document.createElement('div');
+                const cvsId = `roulette-pet-cvs-${idx}`;
+                const rarity = item.rarity || 'Common';
+                const colors = rarityColors[rarity] || rarityColors['Common'];
+                el.className = `w-20 h-20 bg-slate-800 border-2 ${colors.border} flex flex-col items-center justify-center flex-shrink-0 p-1`;
+                el.innerHTML = `
+                    <canvas id="${cvsId}" class="pixel-pet-canvas"></canvas>
+                    <span class="${colors.text} text-[6px] font-bold mt-1 text-center truncate w-full">${item.name}</span>
+                    <span class="${colors.text} text-[5px] uppercase font-bold opacity-80">${rarity}</span>
+                `;
+                track.appendChild(el);
+                setTimeout(() => drawPetIcon(cvsId, item.id), 10);
+            });
+
+            track.style.transition = 'none';
+            track.style.transform = 'translateX(0px)';
+
+            setTimeout(() => {
+                track.style.transition = 'transform 2.8s cubic-bezier(0.15, 0.9, 0.15, 1)';
+                track.style.transform = 'translateX(-2100px)';
+            }, 50);
+
+            setTimeout(() => {
+                ownedPets.push({ id: winnerKey, level: 1 });
+                const winInfo = allPets[winnerKey];
+                const winRarity = winInfo.rarity || 'Common';
+                const winColors = rarityColors[winRarity] || rarityColors['Common'];
+                document.getElementById('gacha-result').innerHTML = `<span class="text-[9px] ${winColors.text} font-bold">HATCHED: ${winInfo.name.toUpperCase()} (${winRarity.toUpperCase()})!</span>`;
+                document.getElementById('back-gacha-btn').classList.remove('hidden');
+                updateDisplay();
+                savePlayerData();
+            }, 3000);
+        }
+
+        function renderPetsInventory() {
+            const grid = document.getElementById('pets-inventory-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            ownedPets.forEach((p, idx) => {
+                const info = allPets[p.id];
+                if (!info) return;
+                const rarity = info.rarity || 'Common';
+                const colors = rarityColors[rarity] || rarityColors['Common'];
+                const card = document.createElement('div');
+                const cvsId = `inv-pet-cvs-${idx}`;
+                card.className = `bg-slate-800 border-2 ${colors.border} pixel-border-sm p-1.5 flex flex-col items-center text-center`;
+                card.innerHTML = `
+                    <canvas id="${cvsId}" class="pixel-pet-canvas"></canvas>
+                    <span class="text-[6px] text-white font-bold mt-1">${info.name}</span>
+                    <span class="${colors.text} text-[5px] font-bold uppercase mt-0.5">${rarity}</span>
+                    <span class="text-[6px] text-yellow-300 font-bold">L${p.level || 1}</span>
+                `;
+                grid.appendChild(card);
+                setTimeout(() => drawPetIcon(cvsId, p.id), 10);
+            });
+        }
+
+        function resetSkinGachaView() {
+            document.getElementById('skin-gacha-buttons').classList.remove('hidden');
+            document.getElementById('skin-roller-view').classList.add('hidden');
+            document.getElementById('skin-roller-view').classList.remove('flex');
+            document.getElementById('skin-gacha-result').innerText = "Spin to unlock new food skins!";
+            document.getElementById('skin-gacha-result').className = "text-[8px] text-emerald-300 font-bold min-h-[16px] my-1";
+        }
+
+        function rollSkinGacha(cost) {
+            const resEl = document.getElementById('skin-gacha-result');
+            if (score < cost) {
+                if (resEl) {
+                    resEl.className = "text-[8px] text-red-400 font-bold min-h-[16px] my-1";
+                    resEl.innerText = "NOT ENOUGH BITES!";
+                }
+                return;
+            }
+
+            score -= cost;
+            updateDisplay();
+
+            document.getElementById('skin-gacha-buttons').classList.add('hidden');
+            document.getElementById('skin-roller-view').classList.remove('hidden');
+            document.getElementById('skin-roller-view').classList.add('flex');
+            document.getElementById('back-skin-btn').classList.add('hidden');
+            if (resEl) resEl.innerText = "SPINNING...";
+
+            const track = document.getElementById('skin-roulette-track');
+            track.innerHTML = '';
+
+            const skinKeys = ["Donut", "Pizza", "Pasta"];
+            const items = [];
+            for (let i = 0; i < 35; i++) {
+                const k = skinKeys[Math.floor(Math.random() * skinKeys.length)];
+                items.push(k);
+            }
+
+            const rand = Math.random() * 100;
+            let selected = "Donut";
+
+            if (cost >= 50000) {
+                // Deluxe Roll: 25% Pasta, 40% Pizza, 35% Donut
+                if (rand < 25) selected = "Pasta";
+                else if (rand < 65) selected = "Pizza";
+                else selected = "Donut";
+            } else {
+                // Standard Roll: 10% Pasta, 35% Pizza, 55% Donut
+                if (rand < 10) selected = "Pasta";
+                else if (rand < 45) selected = "Pizza";
+                else selected = "Donut";
+            }
+
+            items[28] = selected;
+
+            items.forEach((sKey, idx) => {
+                const el = document.createElement('div');
+                const cvsId = `roulette-skin-cvs-${idx}`;
+                const info = skinsInfo[sKey] || { name: sKey };
+                el.className = 'w-20 h-20 bg-slate-800 border-2 border-emerald-400 flex flex-col items-center justify-center flex-shrink-0 p-1';
+                el.innerHTML = `<canvas id="${cvsId}" width="40" height="40" class="pixel-shadow"></canvas><span class="text-[6px] text-white mt-1 font-bold">${info.name}</span>`;
+                track.appendChild(el);
+                setTimeout(() => drawPixelArt(cvsId, foodArt[sKey].matrix, foodArt[sKey].colors, 4), 10);
+            });
+
+            track.style.transition = 'none';
+            track.style.transform = 'translateX(0px)';
+
+            setTimeout(() => {
+                track.style.transition = 'transform 2.8s cubic-bezier(0.15, 0.9, 0.15, 1)';
+                track.style.transform = 'translateX(-2100px)';
+            }, 50);
+
+            setTimeout(() => {
+                if (!ownedSkins.includes(selected)) {
+                    ownedSkins.push(selected);
+                    if (resEl) {
+                        resEl.className = "text-[8px] text-green-400 font-bold min-h-[16px] my-1";
+                        resEl.innerText = `🎉 UNLOCKED NEW SKIN: ${skinsInfo[selected].name.toUpperCase()}!`;
+                    }
+                } else {
+                    const refund = Math.floor(cost * 0.5);
+                    score += refund;
+                    if (resEl) {
+                        resEl.className = "text-[8px] text-yellow-300 font-bold min-h-[16px] my-1";
+                        resEl.innerText = `DUPLICATE ${skinsInfo[selected].name.toUpperCase()}! +${formatNumber(refund)} Bites Refunded`;
+                    }
+                }
+                document.getElementById('back-skin-btn').classList.remove('hidden');
+                renderSkins();
+                updateDisplay();
+                savePlayerData();
+            }, 3000);
+        }
+
+        function openSkins() {
+            document.getElementById('skins-modal').classList.remove('hidden');
+            document.getElementById('skins-modal').classList.add('flex');
+            resetSkinGachaView();
+            renderSkins();
+        }
+
+        function closeSkins() {
+            document.getElementById('skins-modal').classList.add('hidden');
+            document.getElementById('skins-modal').classList.remove('flex');
+        }
+
+        function renderSkins() {
+            const grid = document.getElementById('skins-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            Object.keys(foodArt).forEach(skinId => {
+                const isOwned = ownedSkins.includes(skinId);
+                const isEquipped = activeSkinId === skinId;
+                const info = skinsInfo[skinId] || { name: skinId, desc: "", rarity: "" };
+
+                const card = document.createElement('div');
+                card.className = `p-2 pixel-border flex flex-col justify-between items-center ${isEquipped ? 'bg-emerald-900 border-emerald-400' : isOwned ? 'bg-slate-800' : 'bg-slate-900 opacity-50'}`;
+                card.innerHTML = `
+                    <div class="text-[8px] text-yellow-300 font-bold text-center">${info.name}</div>
+                    <div class="text-[6px] text-emerald-400 font-bold text-center mt-0.5">[${info.rarity || 'Common'}]</div>
+                    <div class="text-[6px] text-slate-300 text-center my-1">${info.desc}</div>
+                    ${isEquipped 
+                        ? '<span class="text-[7px] text-emerald-400 font-bold">EQUIPPED</span>'
+                        : isOwned 
+                            ? `<button onclick="equipSkin('${skinId}')" class="bg-emerald-600 hover:bg-emerald-500 text-white pixel-border-sm px-2 py-1 text-[7px] cursor-pointer">EQUIP</button>`
+                            : '<span class="text-[7px] text-gray-500">LOCKED (ROLL GACHA)</span>'
+                    }
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function equipSkin(id) {
+            if (ownedSkins.includes(id)) {
+                activeSkinId = id;
+                drawPixelArt('burger-canvas', foodArt[id].matrix, foodArt[id].colors, 13);
+                renderSkins();
+                updateDisplay();
+                savePlayerData();
+            }
+        }
+
+        // PvP System
+        let pvpP1Score = 0;
+        let pvpP2Score = 0;
+        let pvpInterval = null;
+
+        function openPvP() {
+            document.getElementById('pvp-modal').classList.remove('hidden');
+            document.getElementById('pvp-modal').classList.add('flex');
+            document.getElementById('pvp-select-view').classList.remove('hidden');
+            document.getElementById('pvp-game-view').classList.add('hidden');
+        }
+
+        function closePvP() {
+            document.getElementById('pvp-modal').classList.add('hidden');
+            document.getElementById('pvp-modal').classList.remove('flex');
+            clearInterval(pvpInterval);
+        }
+
+        function startPvPBot() {
+            if (score < 500) return;
+            score -= 500;
+            updateDisplay();
+
+            pvpP1Score = 0;
+            pvpP2Score = 0;
+
+            document.getElementById('pvp-select-view').classList.add('hidden');
+            document.getElementById('pvp-game-view').classList.remove('hidden');
+            document.getElementById('pvp-game-view').classList.add('flex');
+
+            pvpInterval = setInterval(() => {
+                pvpP2Score += Math.random() * 4;
+                updatePvPBars();
+                checkPvPWin(true);
+            }, 200);
+        }
+
+        function startPvPFriend() {
+            pvpP1Score = 0;
+            pvpP2Score = 0;
+            document.getElementById('pvp-select-view').classList.add('hidden');
+            document.getElementById('pvp-game-view').classList.remove('hidden');
+            document.getElementById('pvp-game-view').classList.add('flex');
+        }
+
+        function pvpMash() {
+            pvpP1Score += 5;
+            updatePvPBars();
+            checkPvPWin(false);
+        }
+
+        function updatePvPBars() {
+            document.getElementById('pvp-p1-bar').style.width = `${Math.min(100, pvpP1Score)}%`;
+            document.getElementById('pvp-p2-bar').style.width = `${Math.min(100, pvpP2Score)}%`;
+        }
+
+        function checkPvPWin(isBot) {
+            if (pvpP1Score >= 100) {
+                clearInterval(pvpInterval);
+                if (isBot) score += 1000;
+                document.getElementById('pvp-game-view').innerHTML = `
+                    <div class="text-center text-green-400 font-bold text-[10px] my-4">🎉 YOU WON! ${isBot ? '+1,000 BITES' : ''}</div>
+                    <button onclick="closePvP()" class="bg-amber-500 hover:bg-amber-400 text-slate-900 pixel-border p-2 text-[8px] font-bold cursor-pointer">OK</button>
+                `;
+                updateDisplay();
+                savePlayerData();
+            } else if (pvpP2Score >= 100) {
+                clearInterval(pvpInterval);
+                document.getElementById('pvp-game-view').innerHTML = `
+                    <div class="text-center text-red-400 font-bold text-[10px] my-4">💥 YOU LOST! TRY AGAIN!</div>
+                    <button onclick="closePvP()" class="bg-amber-500 hover:bg-amber-400 text-slate-900 pixel-border p-2 text-[8px] font-bold cursor-pointer">OK</button>
+                `;
+            }
+        }
+
+        function openBattlePass() {
+            document.getElementById('battlepass-modal').classList.remove('hidden');
+            document.getElementById('battlepass-modal').classList.add('flex');
+            renderBattlePass();
+        }
+
+        function closeBattlePass() {
+            document.getElementById('battlepass-modal').classList.add('hidden');
+            document.getElementById('battlepass-modal').classList.remove('flex');
+        }
+
+        function renderBattlePass() {
+            const list = document.getElementById('battlepass-list');
+            if (!list) return;
+            list.innerHTML = '';
+
+            battlePassTiers.forEach(tier => {
+                const isClaimed = claimedAchievements.includes(`tier_${tier.tier}`);
+                const isReady = tier.check() && !isClaimed;
+
+                const item = document.createElement('div');
+                item.className = `p-2.5 pixel-border flex justify-between items-center ${isClaimed ? 'bg-gray-800 opacity-60' : isReady ? 'bg-amber-900 border-amber-400' : 'bg-slate-800'}`;
+                item.innerHTML = `
+                    <div>
+                        <div class="text-[8px] text-amber-300 font-bold">${tier.title}</div>
+                        <div class="text-[6px] text-gray-300 mt-1">${tier.desc}</div>
+                        <div class="text-[6px] text-green-400 mt-1 font-bold">🎁 ${tier.rewardText}</div>
+                    </div>
+                    ${isClaimed 
+                        ? '<span class="text-[6px] text-gray-400 font-bold">CLAIMED</span>'
+                        : isReady 
+                            ? `<button onclick="claimBattlePassTier(${tier.tier})" class="bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold pixel-border-sm px-2 py-1 text-[6px] cursor-pointer">CLAIM</button>`
+                            : '<span class="text-[6px] text-gray-500">LOCKED</span>'
+                    }
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function claimBattlePassTier(tierNum) {
+            const tier = battlePassTiers.find(t => t.tier === tierNum);
+            if (!tier) return;
+            const claimKey = `tier_${tier.tier}`;
+            if (tier.check() && !claimedAchievements.includes(claimKey)) {
+                claimedAchievements.push(claimKey);
+                if (tier.reward) score += tier.reward;
+                if (tier.type === "skin_hotdog" && !ownedSkins.includes("Hotdog")) {
+                    ownedSkins.push("Hotdog");
+                }
+                updateDisplay();
+                renderBattlePass();
+                savePlayerData();
+            }
+        }
+
+        // Backward compatibility aliases
+        const openAchievements = openBattlePass;
+        const closeAchievements = closeBattlePass;
+
+        function openLeaderboard() {
+            window.isLeaderboardOpen = true;
+            document.getElementById('leaderboard-modal').classList.remove('hidden');
+            document.getElementById('leaderboard-modal').classList.add('flex');
+            renderLeaderboard();
+        }
+
+        function closeLeaderboard() {
+            window.isLeaderboardOpen = false;
+            document.getElementById('leaderboard-modal').classList.add('hidden');
+            document.getElementById('leaderboard-modal').classList.remove('flex');
+        }
+
+        function renderLeaderboard() {
+            const list = document.getElementById('leaderboard-list');
+            if (!list) return;
+
+            const realPlayers = window.getLiveLeaderboard ? window.getLiveLeaderboard() : [];
+            const cloudUser = window.getCloudUser ? window.getCloudUser() : null;
+
+            list.innerHTML = '';
+
+            if (realPlayers.length === 0) {
+                list.innerHTML = `
+                    <div class="p-4 bg-slate-800 pixel-border text-center flex flex-col items-center gap-2">
+                        <div class="text-[9px] text-yellow-300 font-bold">NO REAL PLAYERS YET!</div>
+                        <div class="text-[7px] text-slate-300 leading-relaxed">Change your username in the top bar to join the real global leaderboard!</div>
+                    </div>
+                `;
+                return;
+            }
+
+            realPlayers.forEach((r, idx) => {
+                const isMe = (cloudUser && r.uid === cloudUser.uid) || (r.name === username && hasJoinedLeaderboard);
+                const item = document.createElement('div');
+                item.className = `p-2 bg-slate-800 pixel-border flex justify-between items-center text-[8px] ${isMe ? 'border-2 border-yellow-400 bg-slate-700' : ''}`;
+                item.innerHTML = `
+                    <div class="flex items-center gap-1.5">
+                        <span class="${isMe ? 'text-yellow-300 font-bold' : 'text-white'}">#${idx + 1} ${r.name}</span>
+                        ${isMe ? '<span class="text-[6px] bg-yellow-500 text-slate-900 px-1 py-0.2 font-bold pixel-border-sm">YOU</span>' : ''}
+                    </div>
+                    <span class="text-green-400 font-bold">${formatNumber(r.score || 0)}</span>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function openCodesModal() {
+            document.getElementById('codes-modal').classList.remove('hidden');
+            document.getElementById('codes-modal').classList.add('flex');
+        }
+
+        function closeCodesModal() {
+            document.getElementById('codes-modal').classList.add('hidden');
+            document.getElementById('codes-modal').classList.remove('flex');
+            document.getElementById('code-msg').innerText = '';
+        }
+
+        function submitCode() {
+            const code = document.getElementById('code-input').value.trim().toUpperCase();
+            const msg = document.getElementById('code-msg');
+
+            if (usedCodes.includes(code)) {
+                msg.className = "text-[7px] text-center text-red-400 mt-2";
+                msg.innerText = "CODE ALREADY USED!";
+                return;
+            }
+
+            if (code === "EVENT") {
+                usedCodes.push(code);
+                if (!ownedSkins.includes("BirthdayCake")) ownedSkins.push("BirthdayCake");
+                activeSkinId = "BirthdayCake";
+                msg.className = "text-[7px] text-center text-green-400 mt-2";
+                msg.innerText = "UNLOCKED BIRTHDAY CAKE SKIN (+5k BPC)!";
+                equipSkin("BirthdayCake");
+            } else if (code === "FRIES") {
+                usedCodes.push(code);
+                if (!ownedSkins.includes("Fries")) ownedSkins.push("Fries");
+                activeSkinId = "Fries";
+                msg.className = "text-[7px] text-center text-green-400 mt-2";
+                msg.innerText = "UNLOCKED FRIES SKIN (+10 BPC)!";
+                equipSkin("Fries");
+            } else if (code === "FOOD" || code === "PIXEL" || code === "BETA") {
+                usedCodes.push(code);
+                score += 50000;
+                msg.className = "text-[7px] text-center text-green-400 mt-2";
+                msg.innerText = "REDEEMED +50,000 BITES!";
+            } else {
+                msg.className = "text-[7px] text-center text-red-400 mt-2";
+                msg.innerText = "INVALID CODE!";
+                return;
+            }
+
+            updateDisplay();
+            savePlayerData();
+        }
+
+        // Golden Food Spawn System (Every 5 minutes)
+        function startGoldenFoodLoop() {
+            setInterval(() => {
+                const star = document.getElementById('golden-food-star');
+                if (star) {
+                    star.style.left = `${Math.random() * 70 + 15}%`;
+                    star.style.top = `${Math.random() * 60 + 20}%`;
+                    star.classList.remove('hidden');
+                }
+            }, 300000); // 5 Minutes
+        }
+
+        function claimGoldenFood() {
+            const star = document.getElementById('golden-food-star');
+            if (star) star.classList.add('hidden');
+
+            const reward = Math.max(100, Math.floor(score * 0.25));
+            score += reward;
+            updateDisplay();
+            savePlayerData();
+        }
+
+        function toggleShopDrawer() {
+            const drawer = document.getElementById('shop-drawer');
+            if (drawer) drawer.classList.toggle('translate-y-full');
+        }
+
+        function updateUsername(val) {
+            const cleanVal = val.trim().toUpperCase();
+            if (cleanVal) {
+                username = cleanVal;
+                hasJoinedLeaderboard = true;
+                
+                // Show indicator badge
+                const badge = document.getElementById('lb-status-badge');
+                if (badge) badge.classList.remove('hidden');
+
+                // Immediately sync player to global leaderboard
+                if (window.syncUserToCloud) {
+                    window.syncUserToCloud(username, score);
+                }
+
+                savePlayerData();
+                if (window.isLeaderboardOpen) renderLeaderboard();
+            }
+        }
+
+        function savePlayerData() {
+            const rawPayload = JSON.stringify({
+                score, totalClicks, username, activeSkinId,
+                hasJoinedLeaderboard,
+                ownedPets, ownedSkins, usedCodes, claimedAchievements,
+                upgrades: upgrades.map(u => ({ id: u.id, count: u.count }))
+            });
+
+            // Attach Anti-Cheat hash signature & version tag
+            const checksum = AntiCheatEngine.computeHash(rawPayload);
+            const package = {
+                version: AntiCheatEngine.SAVE_VERSION,
+                payload: rawPayload,
+                sig: checksum
+            };
+
+            try {
+                localStorage.setItem('FOOD_CLICKER_SAVE', JSON.stringify(package));
+            } catch(e) {}
+        }
+
+        function loadPlayerData() {
+            try {
+                const rawPackage = localStorage.getItem('FOOD_CLICKER_SAVE');
+                if (rawPackage) {
+                    const parsedPkg = JSON.parse(rawPackage);
+
+                    // Version & Anti-Cheat verification
+                    if (!parsedPkg || parsedPkg.version !== AntiCheatEngine.SAVE_VERSION) {
+                        console.log("New game update applied! Resetting player progress.");
+                        localStorage.removeItem('FOOD_CLICKER_SAVE');
+                        return;
+                    }
+
+                    if (parsedPkg && parsedPkg.payload && parsedPkg.sig) {
+                        const expectedSig = AntiCheatEngine.computeHash(parsedPkg.payload);
+                        if (parsedPkg.sig !== expectedSig) {
+                            console.warn("Save file corruption or illegal LocalStorage tampering detected.");
+                            triggerAccountReset("SAVE FILE TAMPERING DETECTED! LocalStorage signature mismatch.");
+                            return;
+                        }
+
+                        const data = JSON.parse(parsedPkg.payload);
+                        score = data.score || 0;
+                        totalClicks = data.totalClicks || 0;
+                        username = data.username || "FOODIE_1";
+                        hasJoinedLeaderboard = !!data.hasJoinedLeaderboard;
+                        activeSkinId = data.activeSkinId || "Burger";
+                        ownedPets = data.ownedPets || [];
+                        ownedSkins = data.ownedSkins || ["Burger"];
+                        usedCodes = data.usedCodes || [];
+                        claimedAchievements = data.claimedAchievements || [];
+
+                        if (Array.isArray(data.upgrades)) {
+                            data.upgrades.forEach(u => {
+                                const found = upgrades.find(up => up.id === u.id);
+                                if (found) found.count = u.count;
+                            });
+                        }
+
+                        const userInp = document.getElementById('username-display');
+                        if (userInp) userInp.value = username;
+
+                        if (hasJoinedLeaderboard) {
+                            const badge = document.getElementById('lb-status-badge');
+                            if (badge) badge.classList.remove('hidden');
+                        }
+                    }
+                }
+            } catch(e) {
+                console.error("Save load error:", e);
+            }
+        }
+
+        // Initialize App on Window Load
+        window.onload = function() {
+            AntiCheatEngine.init();
+            loadPlayerData();
+            drawPixelArt('burger-canvas', foodArt[activeSkinId].matrix, foodArt[activeSkinId].colors, 13);
+            updateDisplay();
+        };
+    </script>
+</body>
+</html>
